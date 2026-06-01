@@ -1,36 +1,3 @@
-# 🚀 Get Started
-
-**This repo is where attendees go to continue their learning after your session — and your Copilot agent will help you set it up.**
-
-### Step 1: Open your repo
-
-Open this repo in a **Codespace** (click the green **Code** button → **Create a Codespace**) — or clone it locally. Then open **GitHub Copilot Chat**.
-
-### Step 2: Add your content
-
-Give the agent something to work with. Drag files into the Explorer panel — session abstracts, outlines, screenshots, notes — and drop them in one of two places:
-
-| Where to put it | What goes there | Who sees it |
-|---|---|---|
-| **`_remove-before-publish/`** | Internal reference materials (abstracts, outlines, screenshots, planning docs) | **Copilot only** — never published |
-| **`/docs/`, `/src/`, or repo root** | Lab instructions, demo code, sample data, getting-started guides | **Attendees** — published with the repo |
-
-> 💡 Not sure? Start by dropping your session abstract or outline into `_remove-before-publish/`. The agent will figure out what to do with it.
-
-### Step 3: Ask the Agent
-
-Once your content is in the repo, use these three phrases with Copilot to build out your session repo:
-
-| Phrase to use with Copilot | What it does | When to run it |
-|---|---|---|
-| **"Help me get started"** | Sets up session title, description, outcomes, and owners | After you've added your session abstract or outline to the repo |
-| **"Help me refine content"** | Organizes your session content into the repo | Each time you add or update content |
-| **"Help me finalize"** | Final review, cleanup, and publication prep | When you're ready to publish |
-
-> 💡 **These three phrases are just the starting point.** Copilot can do much more — try asking it to brainstorm next steps for attendees, generate code samples, or build out your repo structure. Don't be afraid to put it in plan mode and ask for what you need.
-
----
-
 <a name="start-building"></a>
 <br>
 <p align="center">
@@ -39,62 +6,121 @@ Once your content is in the repo, use these three phrases with Copilot to build 
 
 # [Microsoft Build 2026](https://build.microsoft.com)
 
-## 🔥 BRKXXX: SESSION TITLE
+## 🚀 BRK241: From Prototype to Production — Build and Run Agents at Scale
 
 ### Session Description
 
-*Add Session Description*
+Taking an AI agent from a working prototype to a reliable, scalable production
+service involves real engineering: deployment, tools, memory, long-running work,
+human oversight, and observability. This breakout walks that journey using two
+sample agents you can run yourself on **Microsoft Foundry**:
 
-### 🏫 Getting started in a guided session
+- **`field-ops-agent`** — a voice-enabled field technician assistant built on the
+  **Microsoft Agent Framework**, showing tools, an MCP **Toolbox** connection, an
+  optional **Microsoft Fabric** data agent, and procedural memory.
+- **`fibey-coordinator`** — a long-running network operations coordinator that
+  monitors telemetry, persists context across sessions, **scales to zero** while
+  waiting, gates actions behind **human-in-the-loop** approvals, and can work in
+  **Microsoft Teams**.
 
-To get started in a guided lab session:
-- <!-- step 1 -->
-- <!-- step 2 -->
-- <!-- step 3 -->
+Both agents deploy with a single `azd` command, emit traces to Application
+Insights, and ship with sample tool data so they run end-to-end out of the box.
 
-### 🏠 Getting started in your own environment
+### 🚀 Getting started
 
-If you're following these steps at your own pace:
-- Clone this repository
-- Set up your development environment
-- <!-- step 3 -->
+You can deploy both agents to your own Microsoft Foundry project with the Azure
+Developer CLI.
+
+**Prerequisites**
+
+- An Azure subscription with access to [Microsoft Foundry](https://learn.microsoft.com/azure/ai-foundry/)
+- [Azure Developer CLI (`azd`)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) v1.24+
+- The Foundry agents extension: `azd extension install azure.ai.agents`
+- Python 3.12+
+
+**Clone and deploy**
+
+```bash
+git clone https://github.com/microsoft/Build26-BRK241-from-prototype-to-production-build-and-run-agents-at-scale.git
+cd Build26-BRK241-from-prototype-to-production-build-and-run-agents-at-scale
+
+# Provision the Foundry project, model deployment, and supporting resources
+azd provision
+
+# Deploy both hosted agents
+azd deploy
+```
+
+Deploy a single agent with `azd deploy field-ops-agent` or
+`azd deploy fibey-coordinator`. Tear everything down with `azd down`.
+
+See [`src/field-ops-agent/`](src/field-ops-agent/README.md) and
+[`src/fibey-coordinator/`](src/fibey-coordinator/README.md) for per-agent details,
+example prompts, and the optional integrations (Toolbox, Fabric, Teams,
+Durable Task Scheduler).
 
 ### 🧠 Learning Outcomes
 
 By the end of this session, you will be able to:
 
-- <!-- outcome 1 -->
-- <!-- outcome 2 -->
-- <!-- outcome 3 -->
+- Build an agent with the **Microsoft Agent Framework** and deploy it to
+  **Microsoft Foundry** as a hosted agent using the Azure Developer CLI.
+- Extend an agent with tools, **MCP/Toolbox** connections, data agents, and
+  procedural memory — and run long-running agents with persistent sessions,
+  scale-to-zero, and human-in-the-loop approvals.
+- Operate agents in production with built-in **tracing** and **evaluation**.
 
 ### 💬 Keep Learning with Copilot
 
-Try these prompts with GitHub Copilot to explore the topics from this session. Open Copilot Chat in VS Code (`Ctrl+Alt+I` on Windows/Linux, `Cmd+Shift+I` on Mac), paste a prompt, and see what you learn. Try connecting the [Microsoft Learn MCP Server](#-microsoft-learn-mcp-server) for the latest official documentation.
+Try these prompts with GitHub Copilot to explore the topics from this session.
+Open Copilot Chat in Visual Studio Code (`Ctrl+Alt+I` on Windows/Linux,
+`Cmd+Shift+I` on Mac), paste a prompt, and see what you learn. Connect the
+[Microsoft Learn MCP Server](#-microsoft-learn-mcp-server) for the latest official
+documentation.
 
-Use these as a starting point — or write your own!
+1. Understand the basics:
 
-<!-- Prompts will be tailored to this session's content during repo setup. -->
+```
+Explain what a hosted agent in Microsoft Foundry Agent Service is and how it differs from running an agent on my own infrastructure.
+```
 
-> *Prompts coming soon — check back after the session content is finalized.*
+2. Go deeper:
+
+```
+Using the Microsoft Learn MCP Server, find the latest documentation on the Microsoft Agent Framework and show me how to define a tool and run an agent loop in Python.
+```
+
+3. Build something:
+
+```
+Help me create a hosted agent with the Microsoft Agent Framework that exposes one function tool, then deploy it to Microsoft Foundry with the Azure Developer CLI.
+```
 
 ### 💻 Technologies Used
 
-1. <!-- technology 1 -->
-1. <!-- technology 2 -->
-1. <!-- technology 3 -->
+1. [Microsoft Foundry — Hosted Agents](https://learn.microsoft.com/azure/foundry/agents/concepts/hosted-agents)
+1. [Microsoft Agent Framework](https://learn.microsoft.com/agent-framework/)
+1. [Azure Developer CLI (`azd`)](https://learn.microsoft.com/azure/developer/azure-developer-cli/)
+1. [Model Context Protocol (MCP) tools](https://learn.microsoft.com/agent-framework/agents/tools/)
+1. [Microsoft Fabric data agents](https://learn.microsoft.com/fabric/data-science/concept-data-agent)
+1. [Azure Monitor Application Insights](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview)
+1. [Durable Task Scheduler](https://learn.microsoft.com/azure/azure-functions/durable/durable-task-scheduler/durable-task-scheduler)
+1. [Microsoft Teams bots (Bot Framework)](https://learn.microsoft.com/azure/bot-service/)
 
 ### 📚 Resources and Next Steps
 
 | Resource | Description |
 |:---------|:------------|
-| [https://aka.ms/build26-next-steps](https://aka.ms/build26-next-steps) | Explore lab and session repos to further your learning from Microsoft Build |
-
+| [Build 2026 — Next Steps](https://aka.ms/build26-next-steps) | Explore lab and session repos to further your learning from Microsoft Build |
+| [Quickstart: Deploy your first hosted agent](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-hosted-agent) | Step-by-step quickstart for deploying a hosted agent to Microsoft Foundry |
+| [Foundry Hosted Agents with the Agent Framework](https://learn.microsoft.com/agent-framework/hosting/foundry-hosted-agent) | How the Microsoft Agent Framework hosts and runs agents on Foundry |
+| [Get started with the Agent Framework](https://learn.microsoft.com/agent-framework/get-started/) | Tutorials for building your first agent, adding tools, memory, and workflows |
 
 ### 🌟 Microsoft Learn MCP Server
 
 The Microsoft Learn MCP Server gives your AI agent direct access to Microsoft's official documentation — grounded, up-to-date answers about the products and services covered in this session.
 
-**VS Code** — One click installation: 
+**Visual Studio Code** — One click installation:
 
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Microsoft_Learn_MCP-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=microsoft-learn&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Flearn.microsoft.com%2Fapi%2Fmcp%22%7D)
 
@@ -108,17 +134,12 @@ For more info, other clients, and to post questions, visit the [Learn MCP Server
 
 ## Content Owners
 
-<!-- TODO: Add yourself as a content owner
-1. Change the src in the image tag to {your github url}.png
-2. Change INSERT NAME HERE to your name
-3. Change the github url in the final href to your url. -->
-
 <table>
 <tr>
-    <td align="center"><a href="http://github.com/yourGitHubHandle">
-        <img src="https://github.com/yourGitHubHandle.png" width="100px;" alt="INSERT NAME HERE"/><br />
-        <sub><b>INSERT NAME HERE</b></sub></a><br />
-            <a href="https://github.com/yourGitHubHandle" title="talk">📢</a>
+    <td align="center"><a href="http://github.com/jeffhollan">
+        <img src="https://github.com/jeffhollan.png" width="100px;" alt="Jeff Hollan"/><br />
+        <sub><b>Jeff Hollan</b></sub></a><br />
+            <a href="https://github.com/jeffhollan" title="talk">📢</a>
     </td>
 </tr></table>
 
