@@ -46,5 +46,21 @@ Currently using mock data with rich telemetry, alerts, and incident portfolios.
 
 ## Running
 
-azd ai agent run --service fibey-coordinator
+```bash
+# Deploy to Foundry (from repo root)
+$env:AZURE_TENANT_ID = (az account show --query tenantId -o tsv)  # PowerShell
 azd deploy fibey-coordinator
+
+# Invoke via azd (after deploy)
+azd ai agent run --service fibey-coordinator
+```
+
+The playground URL is printed by `azd deploy`. Open it to chat immediately.
+
+## Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `FOUNDRY_PROJECT_ENDPOINT` | yes | Auto-injected in hosted containers |
+| `AZURE_AI_MODEL_DEPLOYMENT_NAME` | yes | Model deployment name (default: `gpt-5`) |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | no | Auto-injected; enables tracing |

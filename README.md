@@ -44,10 +44,26 @@ Developer CLI.
 git clone https://github.com/microsoft/Build26-BRK241-from-prototype-to-production-build-and-run-agents-at-scale.git
 cd Build26-BRK241-from-prototype-to-production-build-and-run-agents-at-scale
 
-# Provision the Foundry project, model deployment, and supporting resources
-azd provision
+# Install the Foundry agents azd extension (first time only)
+azd extension install azure.ai.agents
 
-# Deploy both hosted agents
+# Log in and select the subscription that will host the project
+azd auth login
+az login
+
+# Provision the Foundry project, model deployment, ACR, and App Insights
+azd provision
+```
+
+After provisioning, set your tenant ID so the post-deploy RBAC hook can authenticate:
+
+```bash
+# Bash / macOS / Linux
+export AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)
+azd deploy
+
+# PowerShell (Windows)
+$env:AZURE_TENANT_ID = (az account show --query tenantId -o tsv)
 azd deploy
 ```
 
@@ -58,6 +74,60 @@ See [`src/field-ops-agent/`](src/field-ops-agent/README.md) and
 [`src/fibey-coordinator/`](src/fibey-coordinator/README.md) for per-agent details,
 example prompts, and the optional integrations (Toolbox, Fabric, Teams,
 Durable Task Scheduler).
+
+> **Tip:** After `azd deploy` succeeds the output prints an **Agent playground** URL
+> for each agent. Open it in the browser to chat with the agent immediately — no
+> extra setup needed.
+
+### 🎬 Running the demo
+
+Once deployed, open each agent's playground URL (printed by `azd deploy`) or
+retrieve it at any time with:
+
+```bash
+azd show
+```
+
+#### field-ops-agent — voice-enabled field assistant
+
+Try these prompts in the playground:
+
+```
+Hey, can you pull up the fiber termination spec for the Quincy North site
+and tell me which panel I should be looking at for the B-side connection?
+```
+
+```
+What repair procedure should I follow for a QSFP-DD transceiver replacement?
+```
+
+```
+Any P1 work orders assigned to me?
+```
+
+The agent responds with the fast-ack voice pattern: it acknowledges in ~1 s,
+then streams the full answer when the background worker finishes.
+
+#### fibey-coordinator — long-running network ops coordinator
+
+```
+Check network telemetry for Quincy North - any active alerts?
+```
+
+```
+Dispatch a work order for the CRC error on Rack B-14
+```
+
+```
+What active incidents do we have across all sites?
+```
+
+```
+Escalate the Quincy North optical power issue - SLA at risk
+```
+
+Fibey persists investigation context between sessions and can wait (scale-to-zero)
+for human approvals via the Durable Task Scheduler.
 
 ### 🧠 Learning Outcomes
 
