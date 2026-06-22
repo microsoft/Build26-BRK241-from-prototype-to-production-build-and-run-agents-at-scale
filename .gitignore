@@ -23,3 +23,9 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+
+# Azure Developer CLI environment (contains deployment-specific secrets)
+.azure/
+
+# Generated ARM/Bicep compiled output
+infra/main.json
