@@ -179,6 +179,178 @@ Programmatic path (REST/SDK) and the end-to-end automation are documented here:
 - [Quickstart: Foundry IQ knowledge base + toolbox for a hosted agent](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-foundry-iq-hosted-agent)
 - [Create a search-index knowledge source](https://learn.microsoft.com/azure/search/agentic-knowledge-source-how-to-search-index)
 
+### CLI / REST path (no portal)
+
+The current `azd ai` extension only ships `azd ai agent` (no `azd ai toolbox`
+yet), so create the toolbox with the **Toolbox REST API** — auth with a bearer
+token for scope `https://ai.azure.com/.default` (`az rest --resource
+https://ai.azure.com`). The toolbox name is the **hyphenated** path segment; the
+tool's `name` is the **underscore** string:
+
+```jsonc
+// POST {project_endpoint}/toolboxes/supplier-docs/versions?api-version=v1
+{
+  "description": "Supplier agreement documents (Foundry IQ) for the field-ops agent.",
+  "tools": [
+    {
+      "type": "azure_ai_search",
+      "name": "supplier_docs",
+      "description": "Hybrid semantic + keyword retrieval over supplier docs. Cite filenames.",
+      "azure_ai_search": {
+        "indexes": [
+          { "index_name": "supplier-docs-ks-index", "project_connection_id": "supplier-docs-search" }
+        ]
+      }
+    }
+  ]
+}
+```
+
+> The Toolbox API has **no** dedicated knowledge-base tool type — Azure AI Search
+> content is exposed via `azure_ai_search` over the **index** (the knowledge
+> source auto-creates `supplier-docs-ks-index`). The connection
+> `supplier-docs-search` uses **AAD** auth (no key), so the **project's** managed
+> identity queries the index — grant it **Search Index Data Reader** on the
+> search service.
+
+The consumer endpoint (serves the default version) is what you put in
+`TOOLBOX_ENDPOINT`:
+
+```
+TOOLBOX_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>/toolboxes/supplier-docs/mcp?api-version=v1
+```
+
+Verify the tool is live with an MCP `tools/list` / `tools/call` against that
+endpoint — it should advertise `supplier_docs` (no `server_label` prefix) and
+return document text for a query like *"Cascade Fiber safety EMR"*.
+
+### End-to-end deployment runbook (validated)
+
+This is the full, ordered path from a clean checkout to a working `supplier_docs`
+tool. `azd provision` / `azd deploy` create the agents, but the knowledge tool
+needs the extra steps below — without them the agent runs against its offline
+mock. Replace every `<placeholder>` with your own values; **never commit real
+resource names, IDs, keys, or `.env` files.**
+
+> **Conventions:** `<account>` = Foundry/AI Services account, `<project>` =
+> Foundry project, `<rg>` = resource group, `<search>` = Azure AI Search service,
+> `<storage>` = storage account, `<container>` = blob container, `<embed-deploy>`
+> = embedding deployment name (e.g. `text-embedding-3-large`). Auth is Entra ID
+> throughout — no keys are stored.
+
+**Step 0 — Prerequisites**
+
+```pwsh
+az login
+azd auth login
+azd extension install azure.ai.agents   # first time only
+```
+
+**Step 1 — Provision base infra + agents**
+
+```pwsh
+azd provision
+$env:AZURE_TENANT_ID = (az account show --query tenantId -o tsv)
+azd deploy
+```
+
+> ⚠️ If you set `AI_PROJECT_DEPENDENT_RESOURCES` by hand, its JSON must be
+> **triple-escaped** in the azd `.env` (match the `AI_PROJECT_DEPLOYMENTS` style),
+> or provisioning fails with `invalid character … after object key:value pair`.
+> A transient `lookup login.microsoftonline.com: no such host` just means retry.
+
+**Step 2 — Deploy an embedding model** (powers vector retrieval)
+
+```pwsh
+az cognitiveservices account deployment create `
+  -g <rg> -n <account> `
+  --deployment-name <embed-deploy> `
+  --model-name text-embedding-3-large --model-version 1 `
+  --model-format OpenAI --sku-name Standard --sku-capacity 50
+```
+
+**Step 3 — Upload the corpus** (Entra auth, not keys)
+
+```pwsh
+az storage blob upload-batch `
+  --account-name <storage> --destination <container> `
+  --source src/field-ops-agent/sample_docs/index_corpus `
+  --pattern "*.md" --auth-mode login
+```
+
+> The `*.md` glob also matches the folder's own `README.md` — delete that one
+> blob afterwards so only the 12 supplier docs are indexed.
+
+**Step 4 — Create the knowledge source + knowledge base** (Azure AI Search REST
+`2026-04-01`, `az rest --resource https://search.azure.com`)
+
+- **Knowledge source** (`supplier-docs-ks`, `kind: azureBlob`): point it at the
+  container via a **managed-identity** connection string
+  (`ResourceId=<storage-resource-id>;` — no account key), set
+  `embeddingModel.azureOpenAIParameters` to your `<account>` OpenAI endpoint +
+  `<embed-deploy>` (no `apiKey`), and include the **file-name field** in
+  `sourceDataFields` so citations resolve. It auto-creates
+  `supplier-docs-ks-{datasource,index,indexer,skillset}`.
+- **Knowledge base** (`supplier-docs-kb`) references the knowledge source.
+
+Exact request bodies: see the linked quickstart and
+[Create a search-index knowledge source](https://learn.microsoft.com/azure/search/agentic-knowledge-source-how-to-search-index).
+Confirm ingestion shows all 12 items processed, `0` failed.
+
+**Step 5 — Create the Toolbox + `supplier_docs` tool** (Foundry REST,
+`az rest --resource https://ai.azure.com`, scope `https://ai.azure.com/.default`)
+
+```pwsh
+# Body = the azure_ai_search tool JSON shown above (tool name: supplier_docs)
+az rest --method post `
+  --uri "<project-endpoint>/toolboxes/supplier-docs/versions?api-version=v1" `
+  --resource "https://ai.azure.com" `
+  --headers "Content-Type=application/json" `
+  --body "@toolbox-body.json"
+# delete toolbox-body.json afterwards — keep request bodies out of git
+```
+
+**Step 6 — Grant retrieval RBAC.** The `supplier-docs-search` connection uses
+**AAD** auth, so the **project** managed identity queries the index. Grant it
+**Search Index Data Reader** on the search service (the project MI is *distinct*
+from the account MI):
+
+```pwsh
+$projMi = az rest --method get `
+  --uri "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account>/projects/<project>?api-version=2025-04-01-preview" `
+  | ConvertFrom-Json | Select-Object -ExpandProperty identity
+az role assignment create `
+  --assignee-object-id $projMi.principalId --assignee-principal-type ServicePrincipal `
+  --role "Search Index Data Reader" `
+  --scope "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Search/searchServices/<search>"
+```
+
+**Step 7 — Wire `TOOLBOX_ENDPOINT` and redeploy**
+
+```pwsh
+azd env set TOOLBOX_ENDPOINT "<project-endpoint>/toolboxes/supplier-docs/mcp?api-version=v1"
+azd deploy field-ops-agent
+```
+
+**Step 8 — Smoke test** (MCP `tools/list` then `tools/call`): the endpoint should
+advertise `supplier_docs` (no prefix) and return supplier document text. Then ask
+the running agent a question like *"what's Cascade Fiber's safety EMR?"* and
+confirm it cites a filename instead of using the mock.
+
+#### Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| Provision: `invalid character 'r' after object key:value pair` | `AI_PROJECT_DEPENDENT_RESOURCES` single-escaped in `.env` | Triple-escape the JSON (`\\\"`) to match `AI_PROJECT_DEPLOYMENTS` |
+| Provision: `lookup login.microsoftonline.com: no such host` | Transient DNS/connectivity | Re-run `azd provision` |
+| Portal: *"Toolbox name must start and end with alphanumeric…"* | Typed `supplier_docs` in the **toolbox name** field | Name the toolbox `supplier-docs`; the tool inside is `supplier_docs` |
+| `tools/list` works but `tools/call` returns no docs | Project MI lacks read on the index | Grant **Search Index Data Reader** (Step 6) |
+| Agent answers from the mock / ignores the tool | `TOOLBOX_ENDPOINT` unset or tool name ≠ `supplier_docs` | Set the endpoint (Step 7); confirm the tool `name` |
+| Retrieve REST 400 `'messages' … not a valid parameter` | Wrong API shape | GA `2026-04-01` uses `intents`, not `messages` |
+| Indexer skipped/failed items | Storage MI role missing | Search MI needs **Storage Blob Data Reader** on `<storage>` |
+
+
+
 ### What documents to put in it (and how to name them)
 
 The agent is built to answer per-subcontractor questions — *contract, insurance,

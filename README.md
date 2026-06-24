@@ -75,6 +75,13 @@ See [`src/field-ops-agent/`](src/field-ops-agent/README.md) and
 example prompts, and the optional integrations (Toolbox, Fabric, Teams,
 Durable Task Scheduler).
 
+> **Wiring the `supplier_docs` knowledge tool (Foundry IQ):** `azd provision` /
+> `azd deploy` create the agents, but the supplier-docs knowledge tool needs a few
+> extra steps (embedding model, corpus upload, knowledge source/base, toolbox, and
+> a role grant). Follow the **End-to-end deployment runbook** in
+> [`src/field-ops-agent/SETUP-INTEGRATIONS.md`](src/field-ops-agent/SETUP-INTEGRATIONS.md)
+> §2 — otherwise the agent answers from its offline mock.
+
 > **Tip:** After `azd deploy` succeeds the output prints an **Agent playground** URL
 > for each agent. Open it in the browser to chat with the agent immediately — no
 > extra setup needed.
