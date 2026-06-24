@@ -183,6 +183,31 @@ MOCK_REPAIR_PROCEDURES = {
 }
 
 MOCK_DOCUMENT_ANALYSIS = {
+    "supplier_agreement": {
+        "document_type": "Supplier Agreement (RALA)",
+        "summary": (
+            "Master Services Agreement & Field Dispatch Schedule for Cascade Fiber Services, LLC "
+            "(Agreement MSA-2026-CF-0417, Rev D). Content Understanding extracted the tabular "
+            "rate card and SLA matrix into agent-ready structured data."
+        ),
+        "extracted_data": {
+            "title": "Master Services Agreement & Field Dispatch Schedule",
+            "agreement_id": "MSA-2026-CF-0417",
+            "revision": "Rev D",
+            "supplier": "Cascade Fiber Services, LLC",
+            "effective": "2026-01-01 to 2027-12-31",
+            "after_hours_rate_usd_per_hour": 235.0,
+            "p1_emergency_rate_usd_per_hour": 310.0,
+            "sla_targets": [
+                "P1 - Critical: ack 15 min, on-site 2 h, 15% credit if missed",
+                "P2 - High: ack 30 min, on-site 8 h, 10% credit if missed",
+                "P3 - Normal: ack 120 min, on-site 48 h, 5% credit if missed"
+            ],
+            "coi": "Northwest Mutual Surety COI-CF-99431, $2M general / $1M professional, exp 2026-12-31",
+            "safety_attestation": "OSHA 300A on file, EMR 0.78, last audit 2026-03-12 (Pass)",
+            "dispatch_quick_reference": "Quincy North B-side - LC/UPC Duplex, MTP-24 trunks, spare locker B-3"
+        }
+    },
     "default": {
         "document_type": "Technical Specification",
         "summary": "Document analyzed successfully. Key findings extracted.",
@@ -269,7 +294,12 @@ def analyze_document(document_url: str, analysis_type: str = "summary") -> str:
         document_url: URL or path to the document to analyze.
         analysis_type: Type of analysis - 'summary', 'extract_specs', 'compliance_check'.
     """
-    result = dict(MOCK_DOCUMENT_ANALYSIS["default"])
+    url_lower = document_url.lower()
+    if "supplier" in url_lower or "agreement" in url_lower or "msa" in url_lower or "cascade" in url_lower:
+        key = "supplier_agreement"
+    else:
+        key = "default"
+    result = dict(MOCK_DOCUMENT_ANALYSIS[key])
     result["source"] = document_url
     result["analysis_type"] = analysis_type
     return json.dumps({"status": "success", "analysis": result}, indent=2)
