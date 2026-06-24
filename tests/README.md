@@ -24,6 +24,11 @@ pytest
   pytest tests/test_tools.py
   ```
 
+- **`tests/test_fibey.py`** — offline smoke tests for the `fibey-coordinator`
+  agent: validates `agent.yaml` (protocols, name) and syntax-checks every
+  Python source via `ast.parse`, without importing the agent (so no Azure or
+  agent-framework deps needed).
+
 ## Deployment pre-flight
 
 Verifies prerequisites and sets `AZURE_TENANT_ID` (the easy-to-miss step before
