@@ -327,10 +327,25 @@ az role assignment create `
 
 **Step 7 — Wire `TOOLBOX_ENDPOINT` and redeploy**
 
+`agent.yaml` already declares the variable with an azd substitution token, so the
+real URL never lands in git — it stays in your gitignored `.env`:
+
+```yaml
+# src/field-ops-agent/agent.yaml → environment_variables
+- name: TOOLBOX_ENDPOINT
+  value: ${TOOLBOX_ENDPOINT}   # resolved from your azd env at deploy time
+```
+
+Set the value in your azd environment, then deploy — azd injects it into the
+container:
+
 ```pwsh
 azd env set TOOLBOX_ENDPOINT "<project-endpoint>/toolboxes/supplier-docs/mcp?api-version=v1"
 azd deploy field-ops-agent
 ```
+
+> If you remove the entry from `agent.yaml`, setting the azd variable alone has no
+> effect — the container only receives variables declared in `environment_variables`.
 
 **Step 8 — Smoke test** (MCP `tools/list` then `tools/call`): the endpoint should
 advertise `supplier_docs` (no prefix) and return supplier document text. Then ask
