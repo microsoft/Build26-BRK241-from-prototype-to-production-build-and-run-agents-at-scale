@@ -74,6 +74,10 @@ azd ai agent invoke --local "What is the fiber spec for Quincy North?"
 azd deploy field-ops-agent
 ```
 
+> **Validate the deployed agent:** [VALIDATION.md](VALIDATION.md) has a scripted
+> set of questions (with expected grounded answers and source docs) covering
+> `supplier_docs` (Foundry IQ) and every local tool.
+
 ## Environment variables
 
 | Variable | Required | Description |
