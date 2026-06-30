@@ -9,6 +9,12 @@ without any external setup; the optional integrations are clearly marked.
 | [`field-ops-agent`](field-ops-agent/README.md) | Build a voice-enabled field assistant | Microsoft Agent Framework, function tools, MCP Toolbox, optional Microsoft Fabric data agent, procedural memory, a voice routing pattern, tracing + evaluation |
 | [`fibey-coordinator`](fibey-coordinator/README.md) | Run a long-running coordinator | Persistent sessions, scale-to-zero, human-in-the-loop approvals via Durable Task Scheduler, optional Microsoft Teams (activity protocol) |
 
+The two agents also form a **multi-agent system**: the coordinator can delegate
+technician questions to (and hand work orders off to) the field-ops agent over
+its Responses endpoint — the *agent-as-tool* pattern. It's opt-in via
+`FIELD_OPS_AGENT_ENDPOINT`; see the
+[fibey-coordinator README](fibey-coordinator/README.md#connecting-to-the-field-ops-agent-multi-agent).
+
 ## Layout
 
 ```

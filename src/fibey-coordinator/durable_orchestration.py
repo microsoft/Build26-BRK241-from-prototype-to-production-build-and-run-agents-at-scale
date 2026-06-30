@@ -28,6 +28,8 @@ from durabletask.azuremanaged.worker import DurableTaskSchedulerWorker
 from agent_framework import Agent
 from agent_framework.azure import DurableAIAgentOrchestrationContext, DurableAIAgentWorker
 
+from field_ops_tool import ask_field_ops_sync
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -54,16 +56,32 @@ def _get_credential():
 # ---------------------------------------------------------------------------
 
 def execute_destructive_action(ctx: task.ActivityContext, action_json: str) -> str:
-    """Activity: Execute a destructive action AFTER human approval."""
+    """Activity: Execute a destructive action AFTER human approval.
+
+    Hands the approved action to the field-ops technician agent (multi-agent
+    handoff). Falls back to a mock dispatch when the field-ops agent isn't
+    configured.
+    """
     action = json.loads(action_json)
     logger.info(f"[DurableTask] Executing approved action: {action.get('action')}")
-    
-    # TODO: Wire into actual dispatch logic
+
+    wo_id = f"WO-{uuid.uuid4().hex[:8].upper()}"
+    location = action.get("location", "Quincy North DC")
+
+    # Hand the approved action to the field-ops technician agent.
+    briefing = (
+        f"Approved action: {action.get('action')} at {location} "
+        f"(work order {wo_id}). Acknowledge and give the first on-site step "
+        "and any parts you'll need."
+    )
+    field_ops_ack = ask_field_ops_sync(briefing)
+
     return json.dumps({
         "action": action.get("action"),
         "status": "dispatched",
-        "work_order_id": f"WO-{uuid.uuid4().hex[:8].upper()}",
-        "details": f"Emergency fiber splice dispatched for {action.get('location', 'Quincy North DC')}",
+        "work_order_id": wo_id,
+        "details": f"Emergency fiber splice dispatched for {location}",
+        "field_ops_acknowledgement": field_ops_ack or "field-ops agent not configured",
     })
 
 

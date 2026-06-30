@@ -33,6 +33,20 @@ environment_variables:
   - name: ENABLE_SENSITIVE_DATA
     value: "true"
 
+  # ── Connected agent: delegate technician questions to the field-ops-agent ──
+  # Base URL of the deployed field-ops-agent (its Responses protocol root). The
+  # coordinator's ask_field_ops tool POSTs to `${FIELD_OPS_AGENT_ENDPOINT}/responses`.
+  # Resolved from your azd env at deploy time (`azd env set FIELD_OPS_AGENT_ENDPOINT "<url>"`),
+  # so the real URL stays in the gitignored .env. If empty, ask_field_ops returns a
+  # graceful "not configured" message instead of failing.
+  # Grant this coordinator's managed identity access to invoke the field-ops agent.
+  - name: FIELD_OPS_AGENT_ENDPOINT
+    value: ${FIELD_OPS_AGENT_ENDPOINT}
+  # Optional: model name sent in the Responses request body (the hosted field-ops
+  # agent uses its own worker model regardless). Defaults to the coordinator model.
+  # - name: FIELD_OPS_AGENT_MODEL
+  #   value: gpt-5
+
   # ── Optional: Durable Task Scheduler (human-in-the-loop approval workflow) ──
   # When set, approval-gated work orders run through a durable orchestration so
   # they survive scale-to-zero. If unset, the agent uses an in-process fallback.

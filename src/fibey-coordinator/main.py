@@ -31,6 +31,8 @@ from azure.ai.agentserver.responses.models import CreateResponse
 from agent_framework import FunctionTool
 from agent_framework_foundry import FoundryChatClient
 
+from field_ops_tool import ask_field_ops
+
 from agent_framework.observability import enable_instrumentation
 
 enable_instrumentation(enable_sensitive_data=True)
@@ -689,7 +691,7 @@ def check_network_telemetry(site: str = "", metric: str = "") -> str:
     return json.dumps({"status": "success", "telemetry": result}, indent=2)
 
 
-def dispatch_work_order(
+async def dispatch_work_order(
     title: str,
     priority: str,
     site: str,
@@ -697,6 +699,12 @@ def dispatch_work_order(
     assignee: str = "Field Tech On-Site",
 ) -> str:
     """Create and dispatch a new work order to field operations.
+
+    The work order is handed off to the field-ops technician agent (multi-agent
+    handoff via ask_field_ops). The technician's acknowledgement — first repair
+    step and parts needed — is returned alongside the work order. If the
+    field-ops agent isn't configured, the dispatch still succeeds and notes that
+    no technician acknowledgement was available.
 
     Args:
         title: Brief title for the work order.
@@ -708,6 +716,19 @@ def dispatch_work_order(
     wo_id = (
         f"WO-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{hash(title) % 1000:03d}"
     )
+
+    # ── Multi-agent handoff: brief the field-ops technician agent ─────────────
+    briefing = (
+        f"New work order {wo_id} has been dispatched to you.\n"
+        f"Title: {title}\n"
+        f"Priority: {priority}\n"
+        f"Site: {site}\n"
+        f"Details: {description}\n\n"
+        "Acknowledge the work order, then tell me the first repair step and any "
+        "parts you'll need."
+    )
+    field_ops_ack = await ask_field_ops(briefing)
+
     result = {
         "status": "success",
         "work_order": {
@@ -720,6 +741,7 @@ def dispatch_work_order(
             "status": "Dispatched",
             "created": datetime.now(timezone.utc).isoformat(),
         },
+        "field_ops_acknowledgement": field_ops_ack,
         "message": f"Work order {wo_id} created and dispatched to {assignee}.",
     }
     return json.dumps(result, indent=2)
@@ -905,6 +927,7 @@ Your responsibilities:
 - Dispatch work orders to field technicians
 - Coordinate escalations when issues exceed field capability
 - Save investigation notes for audit trail and knowledge base
+- Delegate on-site/technician questions to the field-ops agent via ask_field_ops
 
 When handling operational queries:
 1. Check telemetry and incident status first for current context
@@ -926,6 +949,14 @@ When asked broadly about active incidents or "what are you working on?":
 
 When asked about a specific incident:
 - Return full detail including timeline, description, and assigned team
+
+Delegating to field operations:
+- For questions that need on-site/technician expertise — site fiber/panel specs,
+  step-by-step repair procedures, transceiver part numbers, or active work-order
+  detail for a technician — call ask_field_ops and pass the question in natural
+  language, then summarize its answer for the operator.
+- ask_field_ops is read-only (it just asks the field-ops agent); it does NOT
+  require request_approval.
 
 Guidelines:
 - Always check current telemetry before making recommendations
@@ -960,6 +991,7 @@ def _create_agent():
         FunctionTool(func=save_investigation, name="save_investigation"),
         FunctionTool(func=get_active_incidents, name="get_active_incidents"),
         FunctionTool(func=escalate_incident, name="escalate_incident"),
+        FunctionTool(func=ask_field_ops, name="ask_field_ops"),
     ]
 
     agent = chat_client.as_agent(

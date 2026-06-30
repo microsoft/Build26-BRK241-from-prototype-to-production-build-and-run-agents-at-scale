@@ -23,6 +23,11 @@ sample agents you can run yourself on **Microsoft Foundry**:
   waiting, gates actions behind **human-in-the-loop** approvals, and can work in
   **Microsoft Teams**.
 
+Together they form a **multi-agent system**: the coordinator delegates technician
+questions to — and hands work orders off to — the field-ops agent over its
+Responses endpoint (the *agent-as-tool* pattern, opt-in via
+`FIELD_OPS_AGENT_ENDPOINT`).
+
 Both agents deploy with a single `azd` command, emit traces to Application
 Insights, and ship with sample tool data so they run end-to-end out of the box.
 
@@ -99,6 +104,31 @@ See [`src/field-ops-agent/`](src/field-ops-agent/README.md) and
 [`src/fibey-coordinator/`](src/fibey-coordinator/README.md) for per-agent details,
 example prompts, and the optional integrations (Toolbox, Fabric, Teams,
 Durable Task Scheduler).
+
+#### Connect the two agents (multi-agent)
+
+By default each agent runs standalone. To turn on the **coordinator → field-ops**
+handoff (so `fibey-coordinator` delegates technician questions to — and hands
+work orders off to — the `field-ops-agent`), point the coordinator at the
+deployed field-ops agent and redeploy it:
+
+```bash
+# 1. Both agents must be deployed first (azd deploy above does both)
+azd deploy field-ops-agent
+azd show            # copy the field-ops-agent endpoint / playground URL
+
+# 2. Point the coordinator at the field-ops agent's Responses endpoint
+azd env set FIELD_OPS_AGENT_ENDPOINT "<field-ops-agent responses base URL>"
+
+# 3. Grant the coordinator's managed identity permission to invoke the
+#    field-ops hosted agent (Foundry User on the project / agent), then redeploy
+azd deploy fibey-coordinator
+```
+
+When `FIELD_OPS_AGENT_ENDPOINT` is unset, the coordinator still runs — its
+`ask_field_ops` / `dispatch_work_order` tools just return a graceful
+"not configured" note. Details:
+[`src/fibey-coordinator/README.md`](src/fibey-coordinator/README.md#connecting-to-the-field-ops-agent-multi-agent).
 
 > **Wiring the `supplier_docs` knowledge tool (Foundry IQ):** `azd provision` /
 > `azd deploy` create the agents, but the supplier-docs knowledge tool needs a few
